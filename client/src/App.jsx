@@ -5,28 +5,30 @@ import LeadCaptureModal from './components/LeadCaptureModal.jsx';
 
 function SunMark() {
   return (
-    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
-      <circle cx="13" cy="13" r="5" fill="#F59E0B" />
-      {Array.from({ length: 8 }).map((_, i) => {
-        const a = (i * Math.PI) / 4;
-        const x1 = 13 + Math.cos(a) * 8;
-        const y1 = 13 + Math.sin(a) * 8;
-        const x2 = 13 + Math.cos(a) * 11;
-        const y2 = 13 + Math.sin(a) * 11;
-        return (
-          <line
-            key={i}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke="#F59E0B"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        );
-      })}
-    </svg>
+    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-dawn shadow-glow">
+      <svg width="22" height="22" viewBox="0 0 26 26" aria-hidden="true">
+        <circle cx="13" cy="13" r="5" fill="#fff" />
+        {Array.from({ length: 8 }).map((_, i) => {
+          const a = (i * Math.PI) / 4;
+          const x1 = 13 + Math.cos(a) * 8;
+          const y1 = 13 + Math.sin(a) * 8;
+          const x2 = 13 + Math.cos(a) * 11;
+          const y2 = 13 + Math.sin(a) * 11;
+          return (
+            <line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#fff"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
@@ -37,10 +39,10 @@ export default function App() {
 
       <header className="border-b border-hair bg-card/70 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <SunMark />
             <div>
-              <div className="font-display text-lg font-bold tracking-tight text-ink">
+              <div className="bg-dawn bg-clip-text font-display text-lg font-bold tracking-tight text-transparent">
                 Sunplan
               </div>
               <div className="-mt-0.5 text-xs text-mist">

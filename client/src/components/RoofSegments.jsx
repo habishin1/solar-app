@@ -105,12 +105,13 @@ function HouseBody({ segments, origin }) {
 
     if (!Number.isFinite(minX) || !Number.isFinite(minHeight)) return null;
 
-    // Walls stop just below the lowest roof plane so the roof reads as
-    // sitting on top with a small eave overhang.
-    const wallHeight = Math.max(2.2, minHeight - 0.6);
+    // Walls stop well below the lowest roof plane so the roof always reads
+    // as sitting on top -- and, critically, so the wall box can never poke
+    // up through the panels resting on the slope.
+    const wallHeight = Math.max(2.0, minHeight - 1.4);
 
-    // Inset slightly so the roof visibly overhangs the walls.
-    const inset = 0.35;
+    // Inset so the roof visibly overhangs the walls (eaves).
+    const inset = 0.5;
     const width = Math.max(2, maxX - minX - inset * 2);
     const depth = Math.max(2, maxZ - minZ - inset * 2);
 

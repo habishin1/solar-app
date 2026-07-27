@@ -4,34 +4,47 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Light "studio" chrome
-        paper: '#F4F6F9',       // page background (cool light neutral)
-        card: '#FFFFFF',        // raised surfaces
-        cardSub: '#FAFBFC',     // subtle inset panels
-        ink: '#15181E',         // primary text
-        ash: '#565D6B',         // secondary text
-        mist: '#8B92A0',        // muted / hints
-        hair: '#E4E8EE',        // hairline borders
-        hairStrong: '#D2D8E1',  // emphasized borders
+        // Clean, slightly cool light base — reads modern/tech
+        paper: '#F6F7FB',
+        card: '#FFFFFF',
+        cardSub: '#F8F9FC',
+        ink: '#13151C',
+        ash: '#565E70',
+        mist: '#8A92A6',
+        hair: '#E7EAF1',
+        hairStrong: '#D6DBE6',
 
-        // Dark viewport (where the 3D model lives)
+        // Dark viewport (unchanged — the 3D model lives here)
         viewport: '#0D1520',
         viewportEdge: '#1A2634',
 
-        // Brand: solar amber — the single bold accent
-        solar: '#F59E0B',
-        solarBright: '#FBBF24',
-        solarDeep: '#B45309',   // text on amber tints
-        solarWash: '#FEF3E2',   // amber tint backgrounds
+        // Sunrise brand gradient stops + a solid mid for single-color use
+        dawn1: '#FBA23C',
+        dawn2: '#F76B4E',
+        brand: '#F7853B',
+        brandDeep: '#C2551F',
+        brandWash: '#FFF1E7',
+
+        // Cool electric accent for small modern pops (focus, links)
+        volt: '#6366F1',
       },
       fontFamily: {
-        display: ['Archivo', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'monospace'],
+        display: ['Sora', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'sans-serif'],
+        num: ['Sora', 'sans-serif'],
+      },
+      borderRadius: {
+        xl: '0.9rem',
+        '2xl': '1.15rem',
+        '3xl': '1.5rem',
       },
       boxShadow: {
-        card: '0 1px 2px rgba(21,24,30,0.04), 0 1px 3px rgba(21,24,30,0.06)',
-        lift: '0 8px 30px rgba(21,24,30,0.12)',
+        card: '0 1px 2px rgba(19,21,28,0.04), 0 4px 16px rgba(19,21,28,0.05)',
+        lift: '0 12px 40px rgba(19,21,28,0.14)',
+        glow: '0 6px 20px rgba(247,133,59,0.35)',
+      },
+      backgroundImage: {
+        dawn: 'linear-gradient(135deg, #FBA23C 0%, #F76B4E 100%)',
       },
     },
   },

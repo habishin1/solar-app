@@ -81,7 +81,7 @@ function EmptyState({ status, error }) {
     <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-viewportEdge">
         {isLoading ? (
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-solar/30 border-t-solar" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
         ) : (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
@@ -96,9 +96,9 @@ function EmptyState({ status, error }) {
       </div>
       <p className="max-w-xs text-sm text-slate-300">
         {isError
-          ? error || 'No solar data available for that address yet.'
+          ? error || 'No brand data available for that address yet.'
           : isLoading
-          ? 'Fetching roof geometry and solar potential…'
+          ? 'Fetching roof geometry and brand potential…'
           : 'Enter an address to load its roof and start designing.'}
       </p>
     </div>
@@ -146,12 +146,12 @@ export default function SolarScene() {
             <div className="text-[10px] uppercase tracking-wider text-slate-400">
               Analyzing
             </div>
-            <div className="max-w-[240px] truncate font-mono text-xs text-slate-100">
+            <div className="max-w-[240px] truncate font-num text-xs text-slate-100">
               {formattedAddress}
             </div>
           </div>
 
-          <div className="pointer-events-none absolute bottom-4 left-4 font-mono text-[11px] text-slate-500">
+          <div className="pointer-events-none absolute bottom-4 left-4 font-num text-[11px] text-slate-500">
             drag to orbit · scroll to zoom · click a panel to toggle
           </div>
         </>

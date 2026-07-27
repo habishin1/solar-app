@@ -16,7 +16,7 @@ function ChoiceRow({ label, options, value, onChange }) {
             onClick={() => onChange(value === opt ? null : opt)}
             className={`rounded-lg border px-3 py-1.5 text-sm transition ${
               value === opt
-                ? 'border-solar bg-solarWash text-solarDeep'
+                ? 'border-brand bg-brandWash text-brandDeep'
                 : 'border-hair bg-card text-ink hover:border-hairStrong'
             }`}
           >
@@ -36,7 +36,7 @@ function Field({ label, ...props }) {
         {...props}
         className="w-full rounded-lg border border-hair bg-card px-3 py-2.5 text-sm
                    text-ink placeholder:text-mist
-                   focus:border-solar focus:outline-none focus:ring-2 focus:ring-solar/25"
+                   focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
       />
     </label>
   );
@@ -53,15 +53,15 @@ function DesignSummary({ snapshot }) {
   ].filter(Boolean);
 
   return (
-    <div className="rounded-xl border border-solar/30 bg-solarWash p-3.5">
+    <div className="rounded-xl border border-brand/30 bg-brandWash p-3.5">
       <div className="flex items-center gap-1.5">
-        <div className="h-1.5 w-1.5 rounded-full bg-solar" />
-        <div className="text-[11px] font-medium uppercase tracking-wider text-solarDeep">
+        <div className="h-1.5 w-1.5 rounded-full bg-brand" />
+        <div className="text-[11px] font-medium uppercase tracking-wider text-brandDeep">
           Attached to your request
         </div>
       </div>
       {snapshot.address && (
-        <div className="mt-1.5 truncate font-mono text-xs text-ink">
+        <div className="mt-1.5 truncate font-num text-xs text-ink">
           {snapshot.address}
         </div>
       )}
@@ -69,7 +69,7 @@ function DesignSummary({ snapshot }) {
         {rows.map(([k, v]) => (
           <div key={k} className="flex justify-between text-xs">
             <span className="text-ash">{k}</span>
-            <span className="tabular font-mono text-ink">{v}</span>
+            <span className="tabular font-num text-ink">{v}</span>
           </div>
         ))}
       </div>
@@ -84,7 +84,7 @@ function Stepper({ step }) {
         <div
           key={i}
           className={`h-1 flex-1 rounded-full transition ${
-            i <= step ? 'bg-solar' : 'bg-hair'
+            i <= step ? 'bg-brand' : 'bg-hair'
           }`}
         />
       ))}
@@ -138,7 +138,7 @@ export default function LeadCaptureModal() {
 
         {done ? (
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-solarWash">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brandWash">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M5 12.5 10 17l9-10" stroke="#B45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -147,13 +147,13 @@ export default function LeadCaptureModal() {
               You're all set, {contact.name.split(' ')[0]}.
             </h2>
             <p className="mx-auto mt-2 max-w-xs text-sm text-ash">
-              A solar advisor will reach out within one business day with a full
+              A brand advisor will reach out within one business day with a full
               report for the system you designed. No obligation.
             </p>
             <button
               onClick={handleClose}
-              className="mt-5 w-full rounded-xl bg-solar px-4 py-2.5 font-display
-                         text-sm font-semibold text-ink transition hover:bg-solarBright"
+              className="mt-5 w-full rounded-2xl bg-dawn px-4 py-3 font-display
+                         text-sm font-semibold text-white shadow-glow transition hover:brightness-105"
             >
               Back to my design
             </button>
@@ -164,7 +164,7 @@ export default function LeadCaptureModal() {
               <div>
                 <h2 className="font-display text-lg font-semibold text-ink">
                   {step === 0
-                    ? 'Get your full solar report'
+                    ? 'Get your full brand report'
                     : 'A couple quick questions'}
                 </h2>
                 <p className="mt-0.5 text-xs text-mist">
@@ -213,8 +213,8 @@ export default function LeadCaptureModal() {
                 <button
                   disabled={!contactValid}
                   onClick={() => setStep(1)}
-                  className="w-full rounded-xl bg-solar px-4 py-2.5 font-display
-                             text-sm font-semibold text-ink transition hover:bg-solarBright
+                  className="w-full rounded-2xl bg-dawn px-4 py-3 font-display
+                             text-sm font-semibold text-white shadow-glow transition hover:brightness-105
                              disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Continue
@@ -241,7 +241,7 @@ export default function LeadCaptureModal() {
                   onChange={(v) => setQualification({ ...qualification, monthlyBill: v })}
                 />
                 <ChoiceRow
-                  label="When are you looking to go solar?"
+                  label="When are you looking to go brand?"
                   options={TIMELINES}
                   value={qualification.timeline}
                   onChange={(v) => setQualification({ ...qualification, timeline: v })}
@@ -255,8 +255,8 @@ export default function LeadCaptureModal() {
                   <button
                     onClick={() => submitLead({ contact, qualification })}
                     disabled={status === 'saving'}
-                    className="flex-1 rounded-xl bg-solar px-4 py-2.5 font-display
-                               text-sm font-semibold text-ink transition hover:bg-solarBright
+                    className="flex-1 rounded-2xl bg-dawn px-4 py-3 font-display
+                               text-sm font-semibold text-white shadow-glow transition hover:brightness-105
                                disabled:opacity-50"
                   >
                     {status === 'saving' ? 'Sending…' : 'Send my report'}

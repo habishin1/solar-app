@@ -139,9 +139,9 @@ export default function AddressSearch() {
           aria-activedescendant={
             highlight >= 0 ? `${listId}-opt-${highlight}` : undefined
           }
-          className="w-full rounded-lg border border-hair bg-card py-2.5 pl-9 pr-3
+          className="h-[46px] w-full rounded-xl border border-hair bg-card pl-9 pr-3
                      text-sm text-ink shadow-card placeholder:text-mist
-                     focus:border-solar focus:outline-none focus:ring-2 focus:ring-solar/25"
+                     focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
         />
 
         {open && suggestions.length > 0 && (
@@ -164,7 +164,7 @@ export default function AddressSearch() {
                   choose(s);
                 }}
                 className={`cursor-pointer px-3 py-2.5 ${
-                  i === highlight ? 'bg-solarWash' : 'bg-card'
+                  i === highlight ? 'bg-brandWash' : 'bg-card'
                 }`}
               >
                 <div className="truncate text-sm text-ink">{s.main}</div>
@@ -180,8 +180,8 @@ export default function AddressSearch() {
       <button
         type="submit"
         disabled={status === 'loading'}
-        className="h-[42px] rounded-lg bg-solar px-4 text-sm font-medium text-ink
-                   shadow-card transition hover:bg-solarBright
+        className="h-[46px] rounded-xl bg-dawn px-5 text-sm font-semibold text-white
+                   shadow-glow transition hover:brightness-105 active:scale-[0.99]
                    disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === 'loading' ? 'Loading…' : 'Analyze roof'}

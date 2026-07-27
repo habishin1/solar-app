@@ -3,7 +3,6 @@ import {
   geocodeAddress,
   fetchBuildingInsights,
   saveLead,
-  fetchTerrain,
 } from '../lib/api.js';
 import { computeMetrics } from '../lib/solarMath.js';
 
@@ -49,13 +48,13 @@ export const useSolarStore = create((set, get) => ({
         terrain: null,
       });
 
-      // Load the detailed 3D model in the background. This is an
-      // enhancement, not a requirement -- if it fails the app keeps working
-      // with the simpler roof-segment rendering.
-      const center = building.center || { latitude: geo.lat, longitude: geo.lng };
-      fetchTerrain(center.latitude, center.longitude)
-        .then((terrain) => set({ terrain }))
-        .catch(() => set({ terrain: null }));
+      // NOTE: We intentionally render the clean modeled house (sharp-edged
+      // body + tilted roof planes with panels resting flush on the slope)
+      // rather than Google's raw height-map mesh. The height map comes from a
+      // different dataset than the panel positions, so panels don't align to
+      // it, and it includes trees/neighbors as noise. The terrain endpoint
+      // and <TerrainModel> component remain available if you want to revisit
+      // a photo-draped view later -- re-enable by fetching terrain here.
     } catch (err) {
       set({ status: 'error', error: err.message || 'Something went wrong.' });
     }

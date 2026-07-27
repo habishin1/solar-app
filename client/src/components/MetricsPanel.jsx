@@ -7,14 +7,14 @@ import {
 
 function Readout({ label, value, unit, accent }) {
   return (
-    <div className="rounded-xl border border-hair bg-cardSub p-3.5">
+    <div className="rounded-2xl border border-hair bg-cardSub p-4">
       <div className="text-[11px] font-medium uppercase tracking-wider text-mist">
         {label}
       </div>
       <div className="mt-1.5 flex items-baseline gap-1">
         <span
-          className={`tabular font-mono text-[22px] font-medium leading-none ${
-            accent ? 'text-solarDeep' : 'text-ink'
+          className={`tabular font-num text-[22px] font-medium leading-none ${
+            accent ? 'text-brandDeep' : 'text-ink'
           }`}
         >
           {value}
@@ -103,29 +103,29 @@ export default function MetricsPanel() {
       </div>
 
       {metrics.savings ? (
-        <div className="rounded-xl border border-solar/30 bg-solarWash p-4">
+        <div className="rounded-xl border border-brand/30 bg-brandWash p-4">
           <div className="flex items-center gap-1.5">
-            <div className="h-1.5 w-1.5 rounded-full bg-solar" />
-            <div className="text-[11px] font-medium uppercase tracking-wider text-solarDeep">
+            <div className="h-1.5 w-1.5 rounded-full bg-brand" />
+            <div className="text-[11px] font-medium uppercase tracking-wider text-brandDeep">
               Estimated savings · cash purchase
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <div>
-              <div className="tabular font-mono text-lg font-medium text-ink">
+              <div className="tabular font-num text-lg font-medium text-ink">
                 {formatCurrency(metrics.savings.year1, currencyCode)}
               </div>
               <div className="text-xs text-ash">Year 1</div>
             </div>
             <div>
-              <div className="tabular font-mono text-lg font-medium text-ink">
+              <div className="tabular font-num text-lg font-medium text-ink">
                 {formatCurrency(metrics.savings.year20, currencyCode)}
               </div>
               <div className="text-xs text-ash">Over 20 years</div>
             </div>
           </div>
           {metrics.savings.paybackYears != null && (
-            <div className="mt-3 border-t border-solar/20 pt-2.5 text-xs text-solarDeep">
+            <div className="mt-3 border-t border-brand/20 pt-2.5 text-xs text-brandDeep">
               Pays for itself in ~{metrics.savings.paybackYears.toFixed(1)} years
             </div>
           )}
@@ -138,10 +138,10 @@ export default function MetricsPanel() {
 
       <button
         onClick={openLeadModal}
-        className="w-full rounded-xl bg-solar px-4 py-3 font-display text-sm font-semibold
-                   text-ink shadow-card transition hover:bg-solarBright"
+        className="w-full rounded-2xl bg-dawn px-4 py-3.5 font-display text-sm font-semibold
+                   text-white shadow-glow transition hover:brightness-105 active:scale-[0.99]"
       >
-        Get my full solar report →
+        Get my full brand report →
       </button>
 
       <div className="rounded-xl border border-hair bg-cardSub p-4">
@@ -149,14 +149,14 @@ export default function MetricsPanel() {
           <span className="text-[11px] font-medium uppercase tracking-wider text-mist">
             Design
           </span>
-          <span className="tabular font-mono text-xs text-ash">
+          <span className="tabular font-num text-xs text-ash">
             {pct}% of roof
           </span>
         </div>
 
         <div className="mb-1.5 flex items-center justify-between text-xs text-ash">
           <span>Keep best panels</span>
-          <span className="tabular font-mono text-ink">
+          <span className="tabular font-num text-ink">
             {metrics.activeCount}
           </span>
         </div>
@@ -173,7 +173,7 @@ export default function MetricsPanel() {
           onClick={toggleHeatmap}
           className={`mt-3 w-full rounded-lg border px-3 py-2 text-sm transition ${
             heatmap
-              ? 'border-solar/50 bg-solarWash text-solarDeep'
+              ? 'border-brand/50 bg-brandWash text-brandDeep'
               : 'border-hair bg-card text-ash hover:border-hairStrong'
           }`}
         >

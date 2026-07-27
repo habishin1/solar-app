@@ -12,36 +12,37 @@ body {
   @apply bg-paper text-ink font-body antialiased;
 }
 
-/* Tabular figures everywhere numbers matter, so readouts don't jitter. */
+/* Numbers get tabular figures so readouts don't jitter as they change. */
 .tabular {
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
-/* Refined range slider to match the studio look. */
+/* Modern gradient range slider. */
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
+  height: 6px;
   border-radius: 999px;
-  background: #E4E8EE;
+  background: #E7EAF1;
   outline: none;
 }
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #F59E0B;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(21, 24, 30, 0.2);
+  background: linear-gradient(135deg, #FBA23C, #F76B4E);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(247, 107, 78, 0.4);
   cursor: pointer;
 }
 input[type='range']::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #F59E0B;
-  border: 2px solid #fff;
+  background: linear-gradient(135deg, #FBA23C, #F76B4E);
+  border: 3px solid #fff;
   cursor: pointer;
 }
