@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
-import RoofSegments from './RoofSegments.jsx';
+import HouseModel, { computeHouseModel } from './HouseModel.jsx';
 import SolarPanels from './SolarPanels.jsx';
-import TerrainModel from './TerrainModel.jsx';
 import { useSolarStore } from '../store/useSolarStore.js';
 
 function StudioFloor() {
@@ -31,11 +30,10 @@ function Scene({ building, origin, terrain }) {
   const segments = solarPotential?.roofSegmentStats || [];
   const panels = solarPotential?.solarPanels || [];
 
-  const segmentsByIndex = useMemo(() => {
-    const map = new Map();
-    segments.forEach((s) => map.set(s.segmentIndex, s));
-    return map;
-  }, [segments]);
+  const houseModel = useMemo(
+    () => computeHouseModel(panels, origin),
+    [panels, origin]
+  );
 
   return (
     <>
@@ -49,15 +47,11 @@ function Scene({ building, origin, terrain }) {
         shadow-mapSize-height={1024}
       />
       <StudioFloor />
-      {terrain ? (
-        <TerrainModel terrain={terrain} />
-      ) : (
-        <RoofSegments segments={segments} origin={origin} />
-      )}
+      <HouseModel model={houseModel} />
       <SolarPanels
         panels={panels}
-        segmentsByIndex={segmentsByIndex}
         origin={origin}
+        houseModel={houseModel}
         panelWidth={solarPotential?.panelWidthMeters ?? 1.0}
         panelHeight={solarPotential?.panelHeightMeters ?? 1.7}
       />
