@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { toLocalXZ } from '../lib/geo.js';
-import { orientToRoof } from './RoofSegments.jsx';
+import { orientToRoof, WALL_HEIGHT } from './RoofSegments.jsx';
 import { useSolarStore } from '../store/useSolarStore.js';
 
 const PANEL_THICKNESS = 0.03;
@@ -46,6 +46,7 @@ function PanelMesh({
   panelWidth,
   panelHeight,
   productionRange,
+  heightBase,
 }) {
   const isActive = useSolarStore((s) => s.activePanelIndices.has(index));
   const isHovered = useSolarStore((s) => s.hoveredPanel === index);
@@ -75,7 +76,8 @@ function PanelMesh({
   // uphill panels underneath the roof and floated downhill ones.)
   const position = useMemo(() => {
     const normal = planeBasisFromSegment(segment);
-    const baseH = segment?.planeHeightAtCenterMeters ?? 3;
+    const rawH = segment?.planeHeightAtCenterMeters ?? 0;
+    const baseH = rawH - heightBase + WALL_HEIGHT;
 
     const segCenter = segment
       ? toLocalXZ(
@@ -97,7 +99,7 @@ function PanelMesh({
 
     const lift = NORMAL_OFFSET + (isHovered ? HOVER_OFFSET : 0);
     return new THREE.Vector3(x, yPlane, z).addScaledVector(normal, lift);
-  }, [segment, x, z, origin, isHovered]);
+  }, [segment, x, z, origin, isHovered, heightBase]);
 
   const color = useMemo(() => {
     if (!isActive) return INACTIVE_COLOR;
@@ -160,6 +162,17 @@ export default function SolarPanels({
     return { lo: Math.min(...vals), hi: Math.max(...vals) };
   }, [panels]);
 
+  // Same lowest-segment reference the roof uses, so panels share its scale.
+  const heightBase = useMemo(() => {
+    const heights = [];
+    segmentsByIndex.forEach((seg) => {
+      if (typeof seg.planeHeightAtCenterMeters === 'number') {
+        heights.push(seg.planeHeightAtCenterMeters);
+      }
+    });
+    return heights.length ? Math.min(...heights) : 0;
+  }, [segmentsByIndex]);
+
   return (
     <group>
       {panels.map((panel, index) => (
@@ -172,6 +185,7 @@ export default function SolarPanels({
           panelWidth={panelWidth}
           panelHeight={panelHeight}
           productionRange={productionRange}
+          heightBase={heightBase}
         />
       ))}
     </group>

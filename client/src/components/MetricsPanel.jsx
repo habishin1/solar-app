@@ -141,7 +141,7 @@ export default function MetricsPanel() {
         className="w-full rounded-2xl bg-dawn px-4 py-3.5 font-display text-sm font-semibold
                    text-white shadow-glow transition hover:brightness-105 active:scale-[0.99]"
       >
-        Get my full brand report →
+        Get my full solar report →
       </button>
 
       <div className="rounded-xl border border-hair bg-cardSub p-4">

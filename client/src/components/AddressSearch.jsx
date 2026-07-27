@@ -148,7 +148,7 @@ export default function AddressSearch() {
           <ul
             id={listId}
             role="listbox"
-            className="absolute left-0 right-0 top-full z-40 mt-1.5 overflow-hidden
+            className="absolute left-0 right-0 top-full z-[60] mt-1.5 overflow-hidden
                        rounded-lg border border-hair bg-card shadow-lift"
           >
             {suggestions.map((s, i) => (

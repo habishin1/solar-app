@@ -147,7 +147,7 @@ export default function LeadCaptureModal() {
               You're all set, {contact.name.split(' ')[0]}.
             </h2>
             <p className="mx-auto mt-2 max-w-xs text-sm text-ash">
-              A brand advisor will reach out within one business day with a full
+              A solar advisor will reach out within one business day with a full
               report for the system you designed. No obligation.
             </p>
             <button
@@ -164,7 +164,7 @@ export default function LeadCaptureModal() {
               <div>
                 <h2 className="font-display text-lg font-semibold text-ink">
                   {step === 0
-                    ? 'Get your full brand report'
+                    ? 'Get your full solar report'
                     : 'A couple quick questions'}
                 </h2>
                 <p className="mt-0.5 text-xs text-mist">

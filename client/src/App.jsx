@@ -37,7 +37,7 @@ export default function App() {
     <div className="flex h-screen flex-col bg-paper">
       <LeadCaptureModal />
 
-      <header className="border-b border-hair bg-card/70 px-6 py-4 backdrop-blur">
+      <header className="relative z-50 border-b border-hair bg-card/70 px-6 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <SunMark />
@@ -54,7 +54,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col gap-5 p-5 lg:flex-row">
+      <main className="relative z-0 mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col gap-5 p-5 lg:flex-row">
         <div className="min-h-[320px] flex-1">
           <SolarScene />
         </div>

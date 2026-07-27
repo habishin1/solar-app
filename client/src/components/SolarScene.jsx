@@ -96,9 +96,9 @@ function EmptyState({ status, error }) {
       </div>
       <p className="max-w-xs text-sm text-slate-300">
         {isError
-          ? error || 'No brand data available for that address yet.'
+          ? error || 'No solar data available for that address yet.'
           : isLoading
-          ? 'Fetching roof geometry and brand potential…'
+          ? 'Fetching roof geometry and solar potential…'
           : 'Enter an address to load its roof and start designing.'}
       </p>
     </div>
