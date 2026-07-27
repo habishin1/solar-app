@@ -3,6 +3,7 @@ import {
   geocodeAddress,
   fetchBuildingInsights,
   saveLead,
+  fetchTerrain,
 } from '../lib/api.js';
 import { computeMetrics } from '../lib/solarMath.js';
 
@@ -19,14 +20,16 @@ export const useSolarStore = create((set, get) => ({
   hoveredPanel: null,
   heatmap: false,
 
+  terrain: null,
+
   leadModalOpen: false,
   leadStatus: 'idle', // idle | saving | done | error
   leadError: null,
 
-  async searchAddress(address) {
+  async searchAddress(address, placeId) {
     set({ status: 'loading', error: null });
     try {
-      const geo = await geocodeAddress(address);
+      const geo = await geocodeAddress(address, placeId);
       const building = await fetchBuildingInsights(geo.lat, geo.lng);
 
       // Start with the "max out the roof" design -- every panel Solar API
@@ -43,7 +46,16 @@ export const useSolarStore = create((set, get) => ({
         location: { lat: geo.lat, lng: geo.lng },
         building,
         activePanelIndices,
+        terrain: null,
       });
+
+      // Load the detailed 3D model in the background. This is an
+      // enhancement, not a requirement -- if it fails the app keeps working
+      // with the simpler roof-segment rendering.
+      const center = building.center || { latitude: geo.lat, longitude: geo.lng };
+      fetchTerrain(center.latitude, center.longitude)
+        .then((terrain) => set({ terrain }))
+        .catch(() => set({ terrain: null }));
     } catch (err) {
       set({ status: 'error', error: err.message || 'Something went wrong.' });
     }
@@ -110,6 +122,7 @@ export const useSolarStore = create((set, get) => ({
       lat: location?.lat ?? null,
       lng: location?.lng ?? null,
       panelCount: metrics.activeCount,
+      maxPanelCount: metrics.maxCount,
       systemSizeKw: +(metrics.totalWatts / 1000).toFixed(2),
       yearlyKwh: Math.round(metrics.yearlyKwh),
       estYear1Savings: metrics.savings ? Math.round(metrics.savings.year1) : null,

@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import RoofSegments from './RoofSegments.jsx';
 import SolarPanels from './SolarPanels.jsx';
+import TerrainModel from './TerrainModel.jsx';
 import { useSolarStore } from '../store/useSolarStore.js';
 
 function StudioFloor() {
@@ -25,7 +26,7 @@ function StudioFloor() {
   );
 }
 
-function Scene({ building, origin }) {
+function Scene({ building, origin, terrain }) {
   const solarPotential = building.solarPotential;
   const segments = solarPotential?.roofSegmentStats || [];
   const panels = solarPotential?.solarPanels || [];
@@ -48,7 +49,11 @@ function Scene({ building, origin }) {
         shadow-mapSize-height={1024}
       />
       <StudioFloor />
-      <RoofSegments segments={segments} origin={origin} />
+      {terrain ? (
+        <TerrainModel terrain={terrain} />
+      ) : (
+        <RoofSegments segments={segments} origin={origin} />
+      )}
       <SolarPanels
         panels={panels}
         segmentsByIndex={segmentsByIndex}
@@ -106,6 +111,7 @@ export default function SolarScene() {
   const building = useSolarStore((s) => s.building);
   const location = useSolarStore((s) => s.location);
   const formattedAddress = useSolarStore((s) => s.formattedAddress);
+  const terrain = useSolarStore((s) => s.terrain);
 
   const ready = status === 'ready' && building?.solarPotential;
 
@@ -126,6 +132,7 @@ export default function SolarScene() {
           >
             <Scene
               building={building}
+              terrain={terrain}
               origin={
                 building.center || {
                   latitude: location.lat,

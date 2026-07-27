@@ -91,7 +91,7 @@ ever lives on the backend host — never in the frontend or the browser.**
 
 4. **Lock down the key.** Google Cloud Console → APIs & Services →
    Credentials → your key → API restrictions → "Restrict key" → check only
-   Geocoding API and Solar API. Save.
+   Geocoding API, Solar API, and Places API (New). Save.
 
 ### Production caveats for deployment
 
@@ -103,6 +103,78 @@ ever lives on the backend host — never in the frontend or the browser.**
   start. A paid instance or a keep-alive ping removes it.
 - **Tighten CORS.** The backend currently allows all origins; restrict it to
   your Vercel domain for production.
+
+## Address autocomplete
+
+The search box suggests addresses as you type, via Places API (New)
+proxied through `/api/autocomplete`.
+
+- **Session tokens**: the client generates a token per search and discards
+  it on selection. Google bills autocomplete per *session* rather than per
+  keystroke when a token is supplied — without this, every character typed
+  is a billable request.
+- **Debounced 250ms**, and no request fires below 3 characters.
+- **Selecting a suggestion passes its `placeId`** to geocoding rather than
+  re-parsing free text, which is both more accurate and cheaper to cache.
+- **Fails open**: if Places isn't enabled or the call errors, the dropdown
+  just shows nothing and manual typing still works. It can't block a search.
+- Keyboard accessible: arrow keys, enter, escape, with ARIA combobox roles.
+
+## The 3D model
+
+Two rendering paths, chosen automatically:
+
+1. **Detailed model (preferred).** `/api/terrain` pulls the Solar API's
+   **DSM** (digital surface model — an elevation reading every ~25cm) and the
+   **RGB aerial image**, downsamples the elevations to a ~160x160 grid, and
+   returns them with the photo as a PNG. The client builds a displaced mesh
+   from that grid and drapes the photo over it, so you get the actual roof
+   shape — hips, dormers, chimneys — not an approximation.
+2. **Simple fallback.** If data layers aren't available for a location (or
+   the parse fails), the app silently falls back to tilted rectangles built
+   from `roofSegmentStats`, plus a derived house body.
+
+The fallback matters: **the enhancement can never break the app.** Terrain
+loads in the background after the main result is already on screen.
+
+### Known limits of the detailed model
+
+- Vertical alignment between the DSM mesh and panel positions is derived
+  from separate sources; if panels float or sink on some roofs, adjust the
+  base-elevation offset in `TerrainModel.jsx` / `SolarPanels.jsx`.
+- Mesh spans are computed from pixel count x pixel size rather than
+  reprojecting the GeoTIFF's coordinate system — accurate enough for
+  display, not for survey work.
+- The DSM includes trees and neighbouring structures inside the radius.
+- Data layers are a separate billed call and heavier than buildingInsights;
+  responses are cached (capped at 12 entries for Render's free tier).
+
+## Lead scoring and the ML path
+
+Every submitted lead is automatically scored 0-100 and tiered
+hot / warm / cold, with plain-English reasons attached, so sales knows who
+to call first from lead #1.
+
+**This is deliberately rules-based, not a trained model.** Machine learning
+needs labelled examples — leads where the outcome is already known. Below
+roughly 300-500 labelled leads a trained model doesn't beat sensible rules;
+it overfits and produces confident nonsense. So `server/leadScoring.js`
+does two jobs:
+
+- `scoreLead()` — usable immediately, weighted on signals that actually
+  predict solar conversion (homeownership, bill size, purchase timeline,
+  phone given, system size, whether they customized the layout).
+- `extractFeatures()` — writes those signals as a stable numeric vector onto
+  every stored lead, alongside an `outcome` field (null until you fill it in).
+
+That `outcome` field is the training label. As deals resolve, set it to 1
+(became a customer) or 0 (didn't). At ~300-500 labelled leads you can train
+a real model — start with logistic regression, since it's interpretable and
+resists overfitting on small data — and swap it into `scoreLead()` keeping
+the same inputs and outputs, so nothing else in the app changes.
+
+The step no algorithm can do for you is labelling outcomes. Unlabelled
+leads cannot train anything.
 
 ## Design
 
@@ -136,7 +208,9 @@ solar-app/
 ### 1. Get a Google Maps Platform API key
 
 - Create/select a project in the [Google Cloud Console](https://console.cloud.google.com/).
-- Enable **Geocoding API** and **Solar API**.
+- Enable **Geocoding API**, **Solar API**, and **Places API (New)**.
+  Places API (New) powers the address autocomplete dropdown — without it
+  the dropdown silently returns no suggestions (typing still works).
 - Set up billing (both APIs are billed per request past their free tier).
 - Create an API key and restrict it to just those two APIs.
 - Check the [Solar API supported countries/regions](https://developers.google.com/maps/documentation/solar/coverage)

@@ -49,14 +49,90 @@ function RoofSegmentMesh({ segment, origin }) {
         orientToRoof(mesh, segment.pitchDegrees, segment.azimuthDegrees)
       }
       receiveShadow
+      castShadow
     >
       <planeGeometry args={[width, depth]} />
+      {/* Warm, mid-tone roof so it reads clearly against the dark viewport.
+          The old near-black slate was effectively invisible in the scene. */}
       <meshStandardMaterial
-        color="#3a4552"
+        color="#8a7563"
         side={2}
-        roughness={0.85}
-        metalness={0.05}
+        roughness={0.9}
+        metalness={0.02}
       />
+    </mesh>
+  );
+}
+
+/**
+ * The roof segments alone are just floating slabs -- without a solid mass
+ * under them the render doesn't read as a building at all. This derives a
+ * simple house body from the segments themselves (their combined footprint,
+ * and the lowest roof plane as the eave line) so no extra data is needed.
+ *
+ * It's deliberately a simple block: Solar API gives bounding boxes rather
+ * than true roof outlines, so a plain extruded footprint is the honest
+ * level of detail here rather than faking architectural precision.
+ */
+function HouseBody({ segments, origin }) {
+  const box = useMemo(() => {
+    if (!segments.length) return null;
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    let minHeight = Infinity;
+
+    for (const segment of segments) {
+      const { x, z } = toLocalXZ(
+        segment.center.latitude,
+        segment.center.longitude,
+        origin.latitude,
+        origin.longitude
+      );
+      const { width, depth } = boundingBoxSizeMeters(segment.boundingBox);
+
+      minX = Math.min(minX, x - width / 2);
+      maxX = Math.max(maxX, x + width / 2);
+      minZ = Math.min(minZ, z - depth / 2);
+      maxZ = Math.max(maxZ, z + depth / 2);
+      minHeight = Math.min(
+        minHeight,
+        segment.planeHeightAtCenterMeters ?? 3
+      );
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minHeight)) return null;
+
+    // Walls stop just below the lowest roof plane so the roof reads as
+    // sitting on top with a small eave overhang.
+    const wallHeight = Math.max(2.2, minHeight - 0.6);
+
+    // Inset slightly so the roof visibly overhangs the walls.
+    const inset = 0.35;
+    const width = Math.max(2, maxX - minX - inset * 2);
+    const depth = Math.max(2, maxZ - minZ - inset * 2);
+
+    return {
+      width,
+      depth,
+      wallHeight,
+      cx: (minX + maxX) / 2,
+      cz: (minZ + maxZ) / 2,
+    };
+  }, [segments, origin]);
+
+  if (!box) return null;
+
+  return (
+    <mesh
+      position={[box.cx, box.wallHeight / 2, box.cz]}
+      castShadow
+      receiveShadow
+    >
+      <boxGeometry args={[box.width, box.wallHeight, box.depth]} />
+      <meshStandardMaterial color="#d6cdbd" roughness={0.95} metalness={0} />
     </mesh>
   );
 }
@@ -64,6 +140,7 @@ function RoofSegmentMesh({ segment, origin }) {
 export default function RoofSegments({ segments, origin }) {
   return (
     <group>
+      <HouseBody segments={segments} origin={origin} />
       {segments.map((segment) => (
         <RoofSegmentMesh
           key={segment.segmentIndex}

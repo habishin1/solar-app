@@ -5,6 +5,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
+import { buildTerrainModel } from './solarLayers.js';
+import { scoreLead, extractFeatures } from './leadScoring.js';
 
 const app = express();
 const PORT = process.env.PORT || 8787;
@@ -35,20 +37,94 @@ function roundKey(lat, lng) {
 // GET /api/geocode?address=123 Main St, Springfield
 // -> { lat, lng, formattedAddress }
 // ---------------------------------------------------------------------------
-app.get('/api/geocode', async (req, res) => {
-  const address = (req.query.address || '').toString().trim();
-  if (!address) {
-    return res.status(400).json({ error: 'Missing "address" query param.' });
+// ---------------------------------------------------------------------------
+// GET /api/autocomplete?q=123 Main&session=<uuid>
+// -> { suggestions: [{ placeId, main, secondary }] }
+//
+// Powers the address dropdown. The `session` token groups keystrokes into a
+// single billable autocomplete session -- without it Google bills per
+// keystroke, which gets expensive fast. The client generates one token per
+// search and discards it after a selection.
+// ---------------------------------------------------------------------------
+app.get('/api/autocomplete', async (req, res) => {
+  const q = (req.query.q || '').toString().trim();
+  const sessionToken = (req.query.session || '').toString() || undefined;
+
+  // Below 3 characters the results are noise and it's just wasted spend.
+  if (q.length < 3) return res.json({ suggestions: [] });
+
+  async function call(withTypeFilter) {
+    const body = { input: q, sessionToken };
+    if (withTypeFilter) {
+      // Only interested in things a house can be at.
+      body.includedPrimaryTypes = ['street_address', 'premise', 'subpremise'];
+    }
+    return fetch('https://places.googleapis.com/v1/places:autocomplete', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': API_KEY,
+      },
+      body: JSON.stringify(body),
+    });
   }
 
-  const cacheKey = address.toLowerCase();
+  try {
+    // The type filter is the nicer experience, but if this Google project
+    // rejects it for any reason, fall back to unfiltered rather than
+    // showing the user a broken dropdown.
+    let r = await call(true);
+    if (r.status === 400) r = await call(false);
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      console.warn('[autocomplete]', err.error?.message || r.status);
+      return res.json({ suggestions: [] });
+    }
+
+    const data = await r.json();
+    const suggestions = (data.suggestions || [])
+      .map((s) => s.placePrediction)
+      .filter(Boolean)
+      .slice(0, 5)
+      .map((p) => ({
+        placeId: p.placeId,
+        main: p.structuredFormat?.mainText?.text || p.text?.text || '',
+        secondary: p.structuredFormat?.secondaryText?.text || '',
+        full: p.text?.text || '',
+      }));
+
+    res.json({ suggestions });
+  } catch (err) {
+    // A failed dropdown should never block typing -- degrade to no
+    // suggestions and let the person submit manually.
+    console.warn('[autocomplete]', err.message);
+    res.json({ suggestions: [] });
+  }
+});
+
+app.get('/api/geocode', async (req, res) => {
+  const address = (req.query.address || '').toString().trim();
+  const placeId = (req.query.placeId || '').toString().trim();
+
+  if (!address && !placeId) {
+    return res.status(400).json({ error: 'Missing "address" or "placeId".' });
+  }
+
+  // A placeId is an exact reference, so it makes a better cache key and a
+  // more accurate lookup than re-parsing free text.
+  const cacheKey = placeId || address.toLowerCase();
   if (geocodeCache.has(cacheKey)) {
     return res.json(geocodeCache.get(cacheKey));
   }
 
   try {
     const url = new URL('https://maps.googleapis.com/maps/api/geocode/json');
-    url.searchParams.set('address', address);
+    if (placeId) {
+      url.searchParams.set('place_id', placeId);
+    } else {
+      url.searchParams.set('address', address);
+    }
     url.searchParams.set('key', API_KEY);
 
     const r = await fetch(url);
@@ -137,6 +213,46 @@ app.get('/api/building-insights', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/terrain?lat=..&lng=..
+// -> height grid + aerial texture for the real 3D roof shape.
+//
+// This is strictly an enhancement: if it fails for any reason the client
+// falls back to the simpler roof-segment rendering, so a failure here can
+// never take the app down.
+// ---------------------------------------------------------------------------
+const terrainCache = new Map();
+
+app.get('/api/terrain', async (req, res) => {
+  const lat = parseFloat(req.query.lat);
+  const lng = parseFloat(req.query.lng);
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) {
+    return res.status(400).json({ error: 'Missing/invalid lat or lng.' });
+  }
+
+  const cacheKey = roundKey(lat, lng);
+  if (terrainCache.has(cacheKey)) {
+    return res.json(terrainCache.get(cacheKey));
+  }
+
+  try {
+    const model = await buildTerrainModel({ lat, lng, apiKey: API_KEY });
+    // Cache is capped: these payloads are large and Render's free tier is
+    // memory constrained.
+    if (terrainCache.size > 12) {
+      terrainCache.delete(terrainCache.keys().next().value);
+    }
+    terrainCache.set(cacheKey, model);
+    res.json(model);
+  } catch (err) {
+    console.warn('[terrain]', err.message);
+    res
+      .status(err.status || 502)
+      .json({ error: err.message || 'Terrain unavailable.' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Lead capture
 //
 // For this scaffold, leads are appended to a JSON file on disk so you can see
@@ -202,8 +318,22 @@ app.post('/api/leads', async (req, res) => {
       estYear1Savings: design.estYear1Savings ?? null,
       estYear20Savings: design.estYear20Savings ?? null,
       paybackYears: design.paybackYears ?? null,
+      maxPanelCount: design.maxPanelCount ?? null,
     },
   };
+
+  // Priority scoring (rules-based today, model-ready later).
+  const scored = scoreLead(lead);
+  lead.score = scored.score;
+  lead.tier = scored.tier;
+  lead.scoreReasons = scored.reasons;
+
+  // Numeric snapshot for future model training.
+  lead.features = extractFeatures(lead);
+
+  // Training label. Set to 1 (became a customer) or 0 (didn't) as deals
+  // resolve -- see the UPGRADE PATH notes in leadScoring.js.
+  lead.outcome = null;
 
   try {
     const leads = await readLeads();

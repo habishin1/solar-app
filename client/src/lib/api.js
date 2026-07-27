@@ -16,9 +16,20 @@ async function handle(res) {
   return res.json();
 }
 
-export async function geocodeAddress(address) {
-  const url = `${API_BASE}/api/geocode?address=${encodeURIComponent(address)}`;
-  return handle(await fetch(url));
+export async function geocodeAddress(address, placeId) {
+  const params = new URLSearchParams();
+  if (placeId) params.set('placeId', placeId);
+  if (address) params.set('address', address);
+  return handle(await fetch(`${API_BASE}/api/geocode?${params}`));
+}
+
+export async function fetchAddressSuggestions(query, sessionToken) {
+  const params = new URLSearchParams({ q: query });
+  if (sessionToken) params.set('session', sessionToken);
+  const res = await fetch(`${API_BASE}/api/autocomplete?${params}`);
+  if (!res.ok) return [];
+  const data = await res.json().catch(() => ({}));
+  return data.suggestions || [];
 }
 
 export async function fetchBuildingInsights(lat, lng) {
@@ -34,4 +45,8 @@ export async function saveLead(payload) {
       body: JSON.stringify(payload),
     })
   );
+}
+
+export async function fetchTerrain(lat, lng) {
+  return handle(await fetch(`${API_BASE}/api/terrain?lat=${lat}&lng=${lng}`));
 }
