@@ -4,15 +4,17 @@ import { toLocalXZ } from '../lib/geo.js';
 
 const DEG2RAD = Math.PI / 180;
 
-// Fixed render scale + roof pitch so the house always looks like a tidy
-// single-story home, independent of the API's absolute elevation numbers.
 export const WALL_HEIGHT = 3;
-export const ROOF_PITCH_RAD = 0.4; // ~23 degrees — a natural residential pitch
+export const ROOF_PITCH_RAD = 0.4; // ~23 degrees
+
+const GAP = 1.06; // 6% spacing between panels
+const EDGE_MARGIN = 0.6; // meters of clear roof around the array
+const RIDGE_GAP = 0.35; // clear strip along the ridge
+const EAVE_GAP = 0.35; // clear strip along the eave
 
 /**
- * Orient a flat panel/plane to a given pitch + azimuth. rotateY(azimuth)
- * first (while flat), then rotateX to tilt. Azimuth convention here:
- *   0 -> faces +Z, 90 -> +X, 180 -> -Z, 270 -> -X.
+ * Orient a flat panel/plane to a pitch + azimuth.
+ *   azimuth 0 -> faces +Z, 90 -> +X, 180 -> -Z, 270 -> -X
  */
 export function orientToRoof(mesh, pitchDegrees, azimuthDegrees) {
   mesh.rotation.set(0, 0, 0);
@@ -21,48 +23,108 @@ export function orientToRoof(mesh, pitchDegrees, azimuthDegrees) {
 }
 
 /**
- * Derive a clean gable-roof house from the panel positions (which are far
- * more reliable than the API's roof-segment bounding boxes). Everything is
- * built relative to a fixed eave height so absolute elevations can't distort
- * the scale.
+ * Build a clean gable house AND a tidy, clipped grid of panel slots sized to
+ * the panel count. Panels are snapped to this grid rather than dropped at
+ * their raw GPS positions, so nothing hangs off the eaves or overlaps.
+ *
+ * The house is centered on the real array location, but its dimensions come
+ * from the grid so the roof always fully contains the panels.
  */
-export function computeHouseModel(panels, origin) {
-  if (!panels?.length) return null;
+export function computeHouseModel(panels, origin, panelWidth = 1.0, panelHeight = 1.7) {
+  const n = panels?.length || 0;
+  if (!n) return null;
 
+  // Real array center (so the house sits where the roof actually is).
   const pts = panels.map((p) =>
     toLocalXZ(p.center.latitude, p.center.longitude, origin.latitude, origin.longitude)
   );
-
+  let sx = 0;
+  let sz = 0;
   let minX = Infinity;
   let maxX = -Infinity;
   let minZ = Infinity;
   let maxZ = -Infinity;
   for (const q of pts) {
+    sx += q.x;
+    sz += q.z;
     minX = Math.min(minX, q.x);
     maxX = Math.max(maxX, q.x);
     minZ = Math.min(minZ, q.z);
     maxZ = Math.max(maxZ, q.z);
   }
-  if (!Number.isFinite(minX)) return null;
+  const cx = sx / n;
+  const cz = sz / n;
 
-  const margin = 1.8; // breathing room beyond the array for eaves
-  minX -= margin;
-  maxX += margin;
-  minZ -= margin;
-  maxZ += margin;
+  // Ridge runs along whichever way the real array is wider — keeps the house
+  // proportioned like the actual roof.
+  const ridgeAlongX = maxX - minX >= maxZ - minZ;
 
-  const width = Math.max(4, maxX - minX);
-  const depth = Math.max(4, maxZ - minZ);
-  const cx = (minX + maxX) / 2;
-  const cz = (minZ + maxZ) / 2;
+  const pitch = ROOF_PITCH_RAD;
+  const cosP = Math.cos(pitch);
+  const sinP = Math.sin(pitch);
 
-  // Ridge runs along the longer axis (looks natural, minimizes panel tilt).
-  const ridgeAlongX = width >= depth;
-  const crossSpan = ridgeAlongX ? depth : width;
+  // Panels laid landscape: width along the ridge, height up the slope.
+  const stepAlong = panelWidth * GAP; // along the ridge
+  const stepUp = panelHeight * GAP; // up the slope surface
 
+  const perSlope = Math.ceil(n / 2);
+
+  // Choose column/row counts that give a roughly square ground footprint.
+  let cols = Math.max(
+    1,
+    Math.round(Math.sqrt((2 * perSlope * stepUp * cosP) / stepAlong))
+  );
+  let rows = Math.ceil(perSlope / cols);
+
+  // Roof surface dimensions from the grid (+ margins).
+  const alongLen = cols * stepAlong + EDGE_MARGIN * 2;
+  const slopeLen = rows * stepUp + RIDGE_GAP + EAVE_GAP;
+
+  const crossSpan = 2 * slopeLen * cosP; // horizontal span across both slopes
+  const rise = slopeLen * sinP;
   const eaveH = WALL_HEIGHT;
-  const rise = (crossSpan / 2) * Math.tan(ROOF_PITCH_RAD);
   const ridgeH = eaveH + rise;
+
+  const width = ridgeAlongX ? alongLen : crossSpan;
+  const depth = ridgeAlongX ? crossSpan : alongLen;
+
+  // --- Generate the panel slots, filling from the ridge downward ---
+  const slots = [];
+  const halfAlong = (cols * stepAlong) / 2;
+
+  function pushSlot(side, row, col) {
+    // Position along the ridge.
+    const along = -halfAlong + (col + 0.5) * stepAlong;
+    // Distance up the slope surface from the eave (row 0 nearest ridge).
+    const tFromRidge = RIDGE_GAP + (row + 0.5) * stepUp;
+    const horiz = tFromRidge * cosP; // horizontal distance from ridge
+    const y = ridgeH - tFromRidge * sinP + 0.08 * cosP;
+
+    let x;
+    let z;
+    let azimuthDeg;
+    if (ridgeAlongX) {
+      x = cx + along;
+      z = cz + side * horiz;
+      azimuthDeg = side > 0 ? 0 : 180;
+    } else {
+      z = cz + along;
+      x = cx + side * horiz;
+      azimuthDeg = side > 0 ? 90 : 270;
+    }
+    slots.push({ x, y, z, azimuthDeg, pitchDeg: pitch / DEG2RAD });
+  }
+
+  // Interleave the two slopes row by row so both fill evenly.
+  let placed = 0;
+  for (let row = 0; row < rows && placed < n; row++) {
+    for (const side of [1, -1]) {
+      for (let col = 0; col < cols && placed < n; col++) {
+        pushSlot(side, row, col);
+        placed++;
+      }
+    }
+  }
 
   return {
     cx,
@@ -74,48 +136,23 @@ export function computeHouseModel(panels, origin) {
     ridgeH,
     rise,
     crossSpan,
-    pitchRad: ROOF_PITCH_RAD,
-    pitchDeg: ROOF_PITCH_RAD / DEG2RAD,
-  };
-}
-
-/**
- * Where a panel at (x, z) sits on the gable roof, and how it should tilt.
- * Panels on either side of the ridge lie flush on that slope.
- */
-export function placePanelOnRoof(model, x, z, extraLift = 0) {
-  const { cx, cz, ridgeAlongX, ridgeH, pitchRad, pitchDeg } = model;
-  const cross = ridgeAlongX ? z - cz : x - cx;
-  const side = cross >= 0 ? 1 : -1;
-  const dist = Math.abs(cross);
-
-  const y = ridgeH - dist * Math.tan(pitchRad);
-
-  let azimuthDeg;
-  if (ridgeAlongX) azimuthDeg = side > 0 ? 0 : 180;
-  else azimuthDeg = side > 0 ? 90 : 270;
-
-  return {
-    y: y + (extraLift + 0.08) * Math.cos(pitchRad),
-    azimuthDeg,
-    pitchDeg,
+    pitchRad: pitch,
+    pitchDeg: pitch / DEG2RAD,
+    slots,
   };
 }
 
 function RoofSlope({ model, side }) {
   const { cx, cz, width, depth, ridgeAlongX, eaveH, ridgeH, crossSpan } = model;
-  const slopeLen = Math.sqrt((crossSpan / 2) ** 2 + (ridgeH - eaveH) ** 2) + 0.5;
+  const slopeLen = Math.sqrt((crossSpan / 2) ** 2 + (ridgeH - eaveH) ** 2) + 0.4;
   const midY = (eaveH + ridgeH) / 2;
-  const overhang = (ridgeAlongX ? width : depth) + 0.8;
+  const overhang = (ridgeAlongX ? width : depth) + 0.6;
 
   const pos = ridgeAlongX
     ? [cx, midY, cz + side * (depth / 4)]
     : [cx + side * (width / 4), midY, cz];
 
   const azimuthDeg = ridgeAlongX ? (side > 0 ? 0 : 180) : side > 0 ? 90 : 270;
-  // Local X always maps along the ridge after orientToRoof, so the
-  // ridge-length dimension goes first for both orientations.
-  const args = [overhang, slopeLen];
 
   return (
     <mesh
@@ -124,13 +161,12 @@ function RoofSlope({ model, side }) {
       receiveShadow
       castShadow
     >
-      <planeGeometry args={args} />
-      <meshStandardMaterial color="#7d6a5b" side={2} roughness={0.9} metalness={0.02} />
+      <planeGeometry args={[overhang, slopeLen]} />
+      <meshStandardMaterial color="#6f5d50" side={2} roughness={0.92} metalness={0.02} />
     </mesh>
   );
 }
 
-// Triangular wall that fills the gap under the ridge at each end of the house.
 function GableEnd({ model, side }) {
   const { cx, cz, width, depth, ridgeAlongX, eaveH, rise, crossSpan } = model;
   const half = crossSpan / 2;
@@ -147,8 +183,6 @@ function GableEnd({ model, side }) {
   const pos = ridgeAlongX
     ? [cx + side * (width / 2), eaveH, cz]
     : [cx, eaveH, cz + side * (depth / 2)];
-
-  // Rotate the triangle to face outward at the building end.
   const rotY = ridgeAlongX ? side * (Math.PI / 2) : side > 0 ? 0 : Math.PI;
 
   return (
@@ -160,10 +194,9 @@ function GableEnd({ model, side }) {
 
 export default function HouseModel({ model }) {
   if (!model) return null;
-
   const { cx, cz, width, depth, eaveH } = model;
-  const bodyW = Math.max(2, width - 0.6);
-  const bodyD = Math.max(2, depth - 0.6);
+  const bodyW = Math.max(2, width - 0.4);
+  const bodyD = Math.max(2, depth - 0.4);
 
   return (
     <group>
@@ -171,7 +204,6 @@ export default function HouseModel({ model }) {
         <boxGeometry args={[bodyW, eaveH, bodyD]} />
         <meshStandardMaterial color="#d6cdbd" roughness={0.95} metalness={0} />
       </mesh>
-
       <RoofSlope model={model} side={1} />
       <RoofSlope model={model} side={-1} />
       <GableEnd model={model} side={1} />

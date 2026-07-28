@@ -31,8 +31,14 @@ function Scene({ building, origin, terrain }) {
   const panels = solarPotential?.solarPanels || [];
 
   const houseModel = useMemo(
-    () => computeHouseModel(panels, origin),
-    [panels, origin]
+    () =>
+      computeHouseModel(
+        panels,
+        origin,
+        solarPotential?.panelWidthMeters ?? 1.0,
+        solarPotential?.panelHeightMeters ?? 1.7
+      ),
+    [panels, origin, solarPotential]
   );
 
   return (

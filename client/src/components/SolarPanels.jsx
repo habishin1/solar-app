@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
-import { toLocalXZ } from '../lib/geo.js';
-import { orientToRoof, placePanelOnRoof } from './HouseModel.jsx';
+import { orientToRoof } from './HouseModel.jsx';
 import { useSolarStore } from '../store/useSolarStore.js';
 
 const PANEL_THICKNESS = 0.03;
@@ -17,42 +16,19 @@ function heatColor(t) {
   return c;
 }
 
-function PanelMesh({
-  index,
-  panel,
-  origin,
-  panelWidth,
-  panelHeight,
-  productionRange,
-  houseModel,
-}) {
+function PanelMesh({ index, panel, slot, panelWidth, panelHeight, productionRange }) {
   const isActive = useSolarStore((s) => s.activePanelIndices.has(index));
   const isHovered = useSolarStore((s) => s.hoveredPanel === index);
   const heatmap = useSolarStore((s) => s.heatmap);
   const togglePanel = useSolarStore((s) => s.togglePanel);
   const setHovered = useSolarStore((s) => s.setHovered);
 
-  const { x, z } = useMemo(
-    () =>
-      toLocalXZ(
-        panel.center.latitude,
-        panel.center.longitude,
-        origin.latitude,
-        origin.longitude
-      ),
-    [panel, origin]
-  );
-
   const [w, h] =
     panel.orientation === 'PORTRAIT'
       ? [panelHeight, panelWidth]
       : [panelWidth, panelHeight];
 
-  // Rest the panel on the clean gable roof at this (x, z).
-  const placement = useMemo(
-    () => placePanelOnRoof(houseModel, x, z, isHovered ? HOVER_OFFSET : 0),
-    [houseModel, x, z, isHovered]
-  );
+  const y = slot.y + (isHovered ? HOVER_OFFSET * 0.92 : 0);
 
   const color = useMemo(() => {
     if (!isActive) return INACTIVE_COLOR;
@@ -67,10 +43,8 @@ function PanelMesh({
 
   return (
     <mesh
-      position={[x, placement.y, z]}
-      onUpdate={(mesh) =>
-        orientToRoof(mesh, placement.pitchDeg, placement.azimuthDeg)
-      }
+      position={[slot.x, y, slot.z]}
+      onUpdate={(mesh) => orientToRoof(mesh, slot.pitchDeg, slot.azimuthDeg)}
       onClick={(e) => {
         e.stopPropagation();
         togglePanel(index);
@@ -96,13 +70,7 @@ function PanelMesh({
   );
 }
 
-export default function SolarPanels({
-  panels,
-  origin,
-  panelWidth,
-  panelHeight,
-  houseModel,
-}) {
+export default function SolarPanels({ panels, panelWidth, panelHeight, houseModel }) {
   const productionRange = useMemo(() => {
     const vals = panels
       .map((p) => p.yearlyEnergyDcKwh)
@@ -111,22 +79,24 @@ export default function SolarPanels({
     return { lo: Math.min(...vals), hi: Math.max(...vals) };
   }, [panels]);
 
-  if (!houseModel) return null;
+  const slots = houseModel?.slots;
+  if (!slots) return null;
 
   return (
     <group>
-      {panels.map((panel, index) => (
-        <PanelMesh
-          key={index}
-          index={index}
-          panel={panel}
-          origin={origin}
-          panelWidth={panelWidth}
-          panelHeight={panelHeight}
-          productionRange={productionRange}
-          houseModel={houseModel}
-        />
-      ))}
+      {panels.map((panel, index) =>
+        slots[index] ? (
+          <PanelMesh
+            key={index}
+            index={index}
+            panel={panel}
+            slot={slots[index]}
+            panelWidth={panelWidth}
+            panelHeight={panelHeight}
+            productionRange={productionRange}
+          />
+        ) : null
+      )}
     </group>
   );
 }
