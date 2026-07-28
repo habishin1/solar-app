@@ -1,31 +1,35 @@
 import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, Sky } from '@react-three/drei';
 import HouseModel, { computeHouseModel } from './HouseModel.jsx';
 import SolarPanels from './SolarPanels.jsx';
 import { useSolarStore } from '../store/useSolarStore.js';
 
-function StudioFloor() {
-  // CAD-style grid floor: reinforces the "design tool" feel and gives the
-  // eye a sense of scale as the roof rotates.
+function Ground() {
   return (
-    <Grid
-      position={[0, -0.01, 0]}
-      args={[60, 60]}
-      cellSize={1}
-      cellThickness={0.6}
-      cellColor="#1c2b3a"
-      sectionSize={5}
-      sectionThickness={1}
-      sectionColor="#26405a"
-      fadeDistance={45}
-      fadeStrength={1.5}
-      infiniteGrid
-    />
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
+        <planeGeometry args={[400, 400]} />
+        <meshStandardMaterial color="#8ba36b" roughness={1} />
+      </mesh>
+      <Grid
+        position={[0, 0, 0]}
+        args={[80, 80]}
+        cellSize={1}
+        cellThickness={0.5}
+        cellColor="#7d945f"
+        sectionSize={5}
+        sectionThickness={1}
+        sectionColor="#6f854f"
+        fadeDistance={60}
+        fadeStrength={2}
+        infiniteGrid
+      />
+    </group>
   );
 }
 
-function Scene({ building, origin, terrain }) {
+function Scene({ building, origin }) {
   const solarPotential = building.solarPotential;
   const segments = solarPotential?.roofSegmentStats || [];
   const panels = solarPotential?.solarPanels || [];
@@ -34,40 +38,54 @@ function Scene({ building, origin, terrain }) {
     () =>
       computeHouseModel(
         panels,
+        segments,
         origin,
         solarPotential?.panelWidthMeters ?? 1.0,
         solarPotential?.panelHeightMeters ?? 1.7
       ),
-    [panels, origin, solarPotential]
+    [panels, segments, origin, solarPotential]
   );
 
   return (
     <>
-      <hemisphereLight args={['#bcd6ea', '#2a2622', 0.65]} />
+      <Sky sunPosition={[30, 40, 20]} turbidity={6} rayleigh={1.2} />
+      <ambientLight intensity={0.55} />
+      <hemisphereLight args={['#dfeeff', '#6b7a52', 0.5]} />
       <directionalLight
-        position={[20, 30, 12]}
-        intensity={1.25}
-        color="#fff3da"
+        position={[30, 40, 20]}
+        intensity={1.6}
+        color="#fff4e0"
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-40}
+        shadow-camera-right={40}
+        shadow-camera-top={40}
+        shadow-camera-bottom={-40}
       />
-      <StudioFloor />
-      <HouseModel model={houseModel} />
-      <SolarPanels
-        panels={panels}
-        origin={origin}
-        houseModel={houseModel}
-        panelWidth={solarPotential?.panelWidthMeters ?? 1.0}
-        panelHeight={solarPotential?.panelHeightMeters ?? 1.7}
-      />
+      <Ground />
+
+      {/* Rotate the whole building to its real compass heading. */}
+      <group
+        position={[houseModel?.worldCx || 0, 0, houseModel?.worldCz || 0]}
+        rotation={[0, houseModel?.yaw || 0, 0]}
+      >
+        <HouseModel model={houseModel} />
+        <SolarPanels
+          panels={panels}
+          houseModel={houseModel}
+          panelWidth={solarPotential?.panelWidthMeters ?? 1.0}
+          panelHeight={solarPotential?.panelHeightMeters ?? 1.7}
+        />
+      </group>
+
       <OrbitControls
         makeDefault
-        minDistance={5}
-        maxDistance={80}
-        maxPolarAngle={Math.PI / 2 - 0.02}
+        minDistance={6}
+        maxDistance={90}
+        maxPolarAngle={Math.PI / 2 - 0.03}
         autoRotate
-        autoRotateSpeed={0.4}
+        autoRotateSpeed={0.35}
       />
     </>
   );
@@ -76,25 +94,24 @@ function Scene({ building, origin, terrain }) {
 function EmptyState({ status, error }) {
   const isError = status === 'error';
   const isLoading = status === 'loading';
-
   return (
     <div className="flex h-full w-full flex-col items-center justify-center px-8 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-viewportEdge">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/20">
         {isLoading ? (
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
         ) : (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"
-              stroke="#F59E0B"
+              stroke="#fff"
               strokeWidth="1.5"
               strokeLinecap="round"
             />
-            <circle cx="12" cy="12" r="3.5" stroke="#F59E0B" strokeWidth="1.5" />
+            <circle cx="12" cy="12" r="3.5" stroke="#fff" strokeWidth="1.5" />
           </svg>
         )}
       </div>
-      <p className="max-w-xs text-sm text-slate-300">
+      <p className="max-w-xs text-sm text-white/80">
         {isError
           ? error || 'No solar data available for that address yet.'
           : isLoading
@@ -111,7 +128,6 @@ export default function SolarScene() {
   const building = useSolarStore((s) => s.building);
   const location = useSolarStore((s) => s.location);
   const formattedAddress = useSolarStore((s) => s.formattedAddress);
-  const terrain = useSolarStore((s) => s.terrain);
 
   const ready = status === 'ready' && building?.solarPotential;
 
@@ -119,20 +135,18 @@ export default function SolarScene() {
     <div
       className="relative h-full w-full overflow-hidden rounded-2xl border border-viewportEdge shadow-lift"
       style={{
-        background:
-          'radial-gradient(120% 100% at 50% 0%, #12202e 0%, #0d1520 60%, #0a1017 100%)',
+        background: 'linear-gradient(180deg, #bcdcff 0%, #d9ecff 45%, #eaf4ff 100%)',
       }}
     >
       {ready ? (
         <>
           <Canvas
             shadows
-            camera={{ position: [18, 16, 18], fov: 45 }}
-            gl={{ alpha: true, antialias: true }}
+            camera={{ position: [22, 18, 22], fov: 45 }}
+            gl={{ antialias: true }}
           >
             <Scene
               building={building}
-              terrain={terrain}
               origin={
                 building.center || {
                   latitude: location.lat,
@@ -142,21 +156,24 @@ export default function SolarScene() {
             />
           </Canvas>
 
-          <div className="pointer-events-none absolute left-4 top-4 rounded-lg border border-viewportEdge bg-viewport/80 px-3 py-2 backdrop-blur">
-            <div className="text-[10px] uppercase tracking-wider text-slate-400">
-              Analyzing
-            </div>
-            <div className="max-w-[240px] truncate font-num text-xs text-slate-100">
+          <div className="pointer-events-none absolute left-4 top-4 rounded-lg border border-black/10 bg-white/80 px-3 py-2 backdrop-blur">
+            <div className="text-[10px] uppercase tracking-wider text-ash">Analyzing</div>
+            <div className="max-w-[240px] truncate font-num text-xs text-ink">
               {formattedAddress}
             </div>
           </div>
 
-          <div className="pointer-events-none absolute bottom-4 left-4 font-num text-[11px] text-slate-500">
+          <div className="pointer-events-none absolute bottom-4 left-4 font-num text-[11px] text-ink/50">
             drag to orbit · scroll to zoom · click a panel to toggle
           </div>
         </>
       ) : (
-        <EmptyState status={status} error={error} />
+        <div
+          className="h-full w-full"
+          style={{ background: 'linear-gradient(180deg,#0d1520,#0a1017)' }}
+        >
+          <EmptyState status={status} error={error} />
+        </div>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import {
   computeMetrics,
   formatCurrency,
 } from '../lib/solarMath.js';
+import { computeInsights, carbonEquivalents } from '../lib/solarInsights.js';
 
 function Readout({ label, value, unit, accent }) {
   return (
@@ -40,6 +41,17 @@ export default function MetricsPanel() {
     return computeMetrics({
       solarPotential: building.solarPotential,
       activePanelIndices,
+    });
+  }, [status, building, activePanelIndices]);
+
+  const insights = useMemo(() => {
+    if (status !== 'ready' || !building?.solarPotential) return null;
+    return computeInsights({
+      solarPotential: building.solarPotential,
+      roofSegments: building.solarPotential.roofSegmentStats,
+      imageryDate: building.imageryDate,
+      activePanelIndices,
+      panels: building.solarPotential.solarPanels,
     });
   }, [status, building, activePanelIndices]);
 
@@ -211,6 +223,86 @@ export default function MetricsPanel() {
           </button>
         </div>
       </div>
+
+      {insights && (
+        <div className="rounded-xl border border-hair bg-cardSub p-4">
+          <div className="mb-3 flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-volt" />
+            <span className="text-[11px] font-medium uppercase tracking-wider text-mist">
+              Roof insights
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-sm">
+            {insights.roofAreaFt2 ? (
+              <InsightRow
+                label="Roof area"
+                value={`${Math.round(insights.roofAreaFt2).toLocaleString()} ft²`}
+              />
+            ) : null}
+            {insights.sunHoursYear ? (
+              <InsightRow
+                label="Sun hours/yr"
+                value={Math.round(insights.sunHoursYear).toLocaleString()}
+              />
+            ) : null}
+            {insights.roofFaceCount ? (
+              <InsightRow label="Roof faces" value={`${insights.roofFaceCount}`} />
+            ) : null}
+            {insights.bestFacing ? (
+              <InsightRow label="Best facing" value={insights.bestFacing} />
+            ) : null}
+            {insights.maxKw ? (
+              <InsightRow
+                label="Max capacity"
+                value={`${insights.maxKw.toFixed(1)} kW`}
+              />
+            ) : null}
+            {insights.imagery ? (
+              <InsightRow label="Imagery" value={insights.imagery} />
+            ) : null}
+          </div>
+
+          {insights.directionBreakdown?.length ? (
+            <div className="mt-3 border-t border-hair pt-2.5">
+              <div className="mb-1.5 text-[11px] text-mist">Panels by direction</div>
+              <div className="flex flex-wrap gap-1.5">
+                {insights.directionBreakdown.map((d) => (
+                  <span
+                    key={d.dir}
+                    className="rounded-md border border-hair bg-card px-2 py-0.5 text-xs text-ash"
+                  >
+                    {d.dir}&nbsp;<span className="font-num text-ink">{d.count}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {metrics.carbonOffsetKgPerYear ? (
+            <div className="mt-3 border-t border-hair pt-2.5 text-xs text-ash">
+              Yearly carbon offset ≈{' '}
+              <span className="font-num text-ink">
+                {carbonEquivalents(metrics.carbonOffsetKgPerYear).trees}
+              </span>{' '}
+              trees planted, or{' '}
+              <span className="font-num text-ink">
+                {carbonEquivalents(metrics.carbonOffsetKgPerYear).cars}
+              </span>{' '}
+              cars off the road.
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InsightRow({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <span className="text-ash">{label}</span>
+      <span className="font-num text-ink">{value}</span>
     </div>
   );
 }
