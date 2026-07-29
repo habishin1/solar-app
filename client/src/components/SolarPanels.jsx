@@ -79,18 +79,18 @@ export default function SolarPanels({ panels, panelWidth, panelHeight, houseMode
     return { lo: Math.min(...vals), hi: Math.max(...vals) };
   }, [panels]);
 
-  const slotForPanel = houseModel?.slotForPanel;
-  if (!slotForPanel) return null;
+  const placements = houseModel?.placements;
+  if (!placements) return null;
 
   return (
     <group>
       {panels.map((panel, index) =>
-        slotForPanel[index] ? (
+        placements[index] ? (
           <PanelMesh
             key={index}
             index={index}
             panel={panel}
-            slot={slotForPanel[index]}
+            slot={placements[index]}
             panelWidth={panelWidth}
             panelHeight={panelHeight}
             productionRange={productionRange}

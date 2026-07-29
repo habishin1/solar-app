@@ -35,15 +35,8 @@ function Scene({ building, origin }) {
   const panels = solarPotential?.solarPanels || [];
 
   const houseModel = useMemo(
-    () =>
-      computeHouseModel(
-        panels,
-        segments,
-        origin,
-        solarPotential?.panelWidthMeters ?? 1.0,
-        solarPotential?.panelHeightMeters ?? 1.7
-      ),
-    [panels, segments, origin, solarPotential]
+    () => computeHouseModel(panels, segments, origin),
+    [panels, segments, origin]
   );
 
   return (
@@ -65,19 +58,13 @@ function Scene({ building, origin }) {
       />
       <Ground />
 
-      {/* Rotate the whole building to its real compass heading. */}
-      <group
-        position={[houseModel?.worldCx || 0, 0, houseModel?.worldCz || 0]}
-        rotation={[0, houseModel?.yaw || 0, 0]}
-      >
-        <HouseModel model={houseModel} />
-        <SolarPanels
-          panels={panels}
-          houseModel={houseModel}
-          panelWidth={solarPotential?.panelWidthMeters ?? 1.0}
-          panelHeight={solarPotential?.panelHeightMeters ?? 1.7}
-        />
-      </group>
+      <HouseModel model={houseModel} />
+      <SolarPanels
+        panels={panels}
+        houseModel={houseModel}
+        panelWidth={solarPotential?.panelWidthMeters ?? 1.0}
+        panelHeight={solarPotential?.panelHeightMeters ?? 1.7}
+      />
 
       <OrbitControls
         makeDefault
