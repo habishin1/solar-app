@@ -5,11 +5,11 @@ import { useSolarStore } from '../store/useSolarStore.js';
 
 const PANEL_THICKNESS = 0.03;
 const HOVER_OFFSET = 0.18;
+const PANEL_Z = new THREE.Vector3(0, 0, 1);
 
 const ACTIVE_COLOR = new THREE.Color('#1c3a52');
 const INACTIVE_COLOR = new THREE.Color('#3a3f46');
 
-// Map a 0..1 production score to a blue->amber->red heat color.
 function heatColor(t) {
   const c = new THREE.Color();
   c.setHSL((1 - t) * 0.62, 0.85, 0.5);
@@ -28,14 +28,25 @@ function PanelMesh({ index, panel, slot, panelWidth, panelHeight, productionRang
       ? [panelHeight, panelWidth]
       : [panelWidth, panelHeight];
 
-  const y = slot.y + (isHovered ? HOVER_OFFSET * 0.92 : 0);
+  const hoverLift = isHovered ? HOVER_OFFSET : 0;
+  const y = slot.y + hoverLift * (slot.normal ? slot.normal[1] : 1);
+
+  // DSM mode orients to the measured surface normal; geometric mode uses
+  // pitch/azimuth. Either way the panel lands flush on the roof.
+  const applyOrientation = (mesh) => {
+    if (slot.normal) {
+      const n = new THREE.Vector3(slot.normal[0], slot.normal[1], slot.normal[2]);
+      mesh.quaternion.setFromUnitVectors(PANEL_Z, n);
+    } else {
+      orientToRoof(mesh, slot.pitchDeg || 0, slot.azimuthDeg || 0);
+    }
+  };
 
   const color = useMemo(() => {
     if (!isActive) return INACTIVE_COLOR;
     if (heatmap) {
       const { lo, hi } = productionRange;
-      const t =
-        hi > lo ? ((panel.yearlyEnergyDcKwh ?? lo) - lo) / (hi - lo) : 0.5;
+      const t = hi > lo ? ((panel.yearlyEnergyDcKwh ?? lo) - lo) / (hi - lo) : 0.5;
       return heatColor(t);
     }
     return ACTIVE_COLOR;
@@ -44,7 +55,7 @@ function PanelMesh({ index, panel, slot, panelWidth, panelHeight, productionRang
   return (
     <mesh
       position={[slot.x, y, slot.z]}
-      onUpdate={(mesh) => orientToRoof(mesh, slot.pitchDeg, slot.azimuthDeg)}
+      onUpdate={applyOrientation}
       onClick={(e) => {
         e.stopPropagation();
         togglePanel(index);
@@ -70,7 +81,7 @@ function PanelMesh({ index, panel, slot, panelWidth, panelHeight, productionRang
   );
 }
 
-export default function SolarPanels({ panels, panelWidth, panelHeight, houseModel }) {
+export default function SolarPanels({ panels, panelWidth, panelHeight, placements }) {
   const productionRange = useMemo(() => {
     const vals = panels
       .map((p) => p.yearlyEnergyDcKwh)
@@ -79,7 +90,6 @@ export default function SolarPanels({ panels, panelWidth, panelHeight, houseMode
     return { lo: Math.min(...vals), hi: Math.max(...vals) };
   }, [panels]);
 
-  const placements = houseModel?.placements;
   if (!placements) return null;
 
   return (
