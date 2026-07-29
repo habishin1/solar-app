@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Sky } from '@react-three/drei';
 import HouseModel, { computeHouseModel } from './HouseModel.jsx';
-import { DsmMesh, computeDsmPlacements } from './DsmRoof.jsx';
+import { DsmMesh, computeDsmPlacements, smoothTerrain } from './DsmRoof.jsx';
 import SolarPanels from './SolarPanels.jsx';
 import { useSolarStore } from '../store/useSolarStore.js';
 
@@ -39,24 +39,30 @@ function Scene({ building, origin, terrain }) {
   // model if terrain isn't available for this address.
   const useDsm = !!terrain?.heights?.length;
 
+  // Smooth once so the mesh and the panel sampler agree on the surface.
+  const dsm = useMemo(
+    () => (useDsm ? smoothTerrain(terrain, 1) : null),
+    [useDsm, terrain]
+  );
+
   const geoModel = useMemo(
     () => (useDsm ? null : computeHouseModel(panels, segments, origin)),
     [useDsm, panels, segments, origin]
   );
 
   const placements = useMemo(() => {
-    if (useDsm) return computeDsmPlacements(panels, terrain, origin);
+    if (useDsm) return computeDsmPlacements(panels, dsm, origin);
     return geoModel?.placements || null;
-  }, [useDsm, panels, terrain, origin, geoModel]);
+  }, [useDsm, panels, dsm, origin, geoModel]);
 
   return (
     <>
       <Sky sunPosition={[40, 45, 25]} turbidity={5} rayleigh={1.1} />
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={0.5} />
       <hemisphereLight args={['#dfeeff', '#6b7a52', 0.5]} />
       <directionalLight
         position={[35, 45, 25]}
-        intensity={1.5}
+        intensity={1.25}
         color="#fff4e0"
         castShadow
         shadow-mapSize-width={2048}
@@ -69,7 +75,7 @@ function Scene({ building, origin, terrain }) {
       <Ground />
 
       {useDsm ? (
-        <DsmMesh terrain={terrain} />
+        <DsmMesh terrain={dsm} />
       ) : (
         <HouseModel model={geoModel} />
       )}
@@ -83,12 +89,12 @@ function Scene({ building, origin, terrain }) {
 
       <OrbitControls
         makeDefault
-        minDistance={6}
-        maxDistance={120}
+        minDistance={5}
+        maxDistance={70}
         maxPolarAngle={Math.PI / 2 - 0.03}
         autoRotate
         autoRotateSpeed={0.3}
-        target={[0, 3, 0]}
+        target={[0, 2.5, 0]}
       />
     </>
   );
@@ -140,7 +146,7 @@ export default function SolarScene() {
     >
       {ready ? (
         <>
-          <Canvas shadows camera={{ position: [24, 20, 24], fov: 45 }} gl={{ antialias: true }}>
+          <Canvas shadows camera={{ position: [17, 15, 17], fov: 45 }} gl={{ antialias: true }}>
             <Scene
               building={building}
               terrain={terrain}
