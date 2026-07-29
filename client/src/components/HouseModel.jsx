@@ -115,6 +115,7 @@ export function computeHouseModel(panels, roofSegments, origin) {
 
   // Build a roof tile per segment that has panels, sized to hug them.
   const tiles = [];
+  let minEaveY = Infinity;
   segExtent.forEach((ex, si) => {
     if (!ex.count) return;
     const info = segInfo[si];
@@ -129,6 +130,9 @@ export function computeHouseModel(panels, roofSegments, origin) {
       x: center.x, y: center.y - 0.03, z: center.z,
       w, h, pitchDeg: info.pitchDeg, azimuthDeg: info.O,
     });
+    // The face's lowest (eave) edge: half its slope-length below center.
+    const eaveY = center.y - (h / 2) * Math.sin(info.pitch);
+    minEaveY = Math.min(minEaveY, eaveY);
   });
 
   const bmargin = 1.2;
@@ -136,7 +140,10 @@ export function computeHouseModel(panels, roofSegments, origin) {
   const depth = Math.max(3, aMaxZ - aMinZ + bmargin * 2);
   const cx = (aMinX + aMaxX) / 2;
   const cz = (aMinZ + aMaxZ) / 2;
-  const wallTop = Math.max(1.5, (Number.isFinite(minPanelY) ? minPanelY : WALL_HEIGHT) - 0.6);
+  // Walls rise to the roof's lowest eave so the roof sits ON the house
+  // instead of floating above it.
+  const eave = Number.isFinite(minEaveY) ? minEaveY : WALL_HEIGHT;
+  const wallTop = Math.max(1.8, eave + 0.05);
 
   return {
     placements,

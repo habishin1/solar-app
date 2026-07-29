@@ -19,11 +19,19 @@ export function computeInsights({ solarPotential, roofSegments, imageryDate, act
   const segs = roofSegments || [];
   const allPanels = panels || [];
 
-  // Roof size
+  // Roof size — total, usable (panel-able), and ground footprint
   const roofAreaM2 =
     solarPotential.wholeRoofStats?.areaMeters2 ??
     segs.reduce((s, r) => s + (r.stats?.areaMeters2 || 0), 0);
   const roofAreaFt2 = roofAreaM2 * M2_TO_FT2;
+
+  // Usable = sum of the individual roof-segment areas (the parts that can
+  // actually hold panels), which is the number that drives system size.
+  const usableAreaM2 = segs.reduce((s, r) => s + (r.stats?.areaMeters2 || 0), 0);
+  const usableAreaFt2 = usableAreaM2 * M2_TO_FT2;
+
+  const groundAreaM2 = solarPotential.wholeRoofStats?.groundAreaMeters2 ?? null;
+  const groundAreaFt2 = groundAreaM2 ? groundAreaM2 * M2_TO_FT2 : null;
 
   // Sun
   const sunHoursYear = solarPotential.maxSunshineHoursPerYear ?? null;
@@ -66,6 +74,8 @@ export function computeInsights({ solarPotential, roofSegments, imageryDate, act
   return {
     roofAreaM2,
     roofAreaFt2,
+    usableAreaFt2,
+    groundAreaFt2,
     sunHoursYear,
     directionBreakdown,
     bestFacing,

@@ -240,6 +240,12 @@ export default function MetricsPanel() {
                 value={`${Math.round(insights.roofAreaFt2).toLocaleString()} ft²`}
               />
             ) : null}
+            {insights.usableAreaFt2 ? (
+              <InsightRow
+                label="Usable area"
+                value={`${Math.round(insights.usableAreaFt2).toLocaleString()} ft²`}
+              />
+            ) : null}
             {insights.sunHoursYear ? (
               <InsightRow
                 label="Sun hours/yr"
